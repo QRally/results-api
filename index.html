@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RODGE QRally — Results Board Checker</title>
+<style>
+  :root {
+    --bg: #000000;
+    --surface: #0e1111;
+    --border: #262e2e;
+    --text: #f2f5f5;
+    --muted: #8c9999;
+    --accent: #d4ff00;
+    --green: #00e676;
+    --warn: #ffab00;
+    --danger: #ff3d00;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    margin: 0;
+    padding: 12px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.4;
+  }
+
+  .container {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 1.15rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--muted);
+  }
+
+  .badge.ready {
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  select {
+    width: 100%;
+    background: #000000;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 1rem;
+    margin-bottom: 10px;
+  }
+
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 14px;
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000000;
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-secondary {
+    background: #171c1c;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-small {
+    padding: 7px 10px;
+    font-size: 0.78rem;
+    width: auto;
+    margin: 0;
+  }
+
+  #previewWrap {
+    display: none;
+    margin-top: 8px;
+    margin-bottom: 10px;
+  }
+
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  .preview-tile {
+    position: relative;
+    background: #000000;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px;
+    text-align: center;
+  }
+
+  .preview-tile img {
+    width: 100%;
+    height: 140px;
+    border-radius: 4px;
+    object-fit: cover;
+    cursor: zoom-in;
+    display: block;
+  }
+
+  .remove-tile-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: rgba(0, 0, 0, 0.85);
+    color: var(--text);
+    font-weight: 800;
+    font-size: 0.9rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .img-meta {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 5px;
+  }
+
+  details summary {
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .settings-body {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+
+  .status {
+    display: none;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .status.loading {
+    display: flex;
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .status.error {
+    display: flex;
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  .status.info {
+    display: flex;
+    border-color: var(--border);
+    color: var(--muted);
+  }
+
+  .result-section {
+    display: none;
+  }
+
+  .legend-box {
+    background: #000000;
+    border-left: 3px solid var(--accent);
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  .flag-item {
+    background: #000000;
+    border: 1px solid var(--warn);
+    border-left: 4px solid var(--warn);
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+
+  .flag-item.high {
+    border-color: var(--danger);
+    border-left-color: var(--danger);
+  }
+
+  .flag-title {
+    font-weight: 800;
+    font-size: 0.92rem;
+    color: var(--warn);
+    margin-bottom: 3px;
+  }
+
+  .flag-item.high .flag-title {
+    color: var(--danger);
+  }
+
+  .flag-meta {
+    font-size: 0.74rem;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .raw-code {
+    display: inline-block;
+    background: #1a1f1f;
+    color: var(--accent);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .table-wrap {
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.86rem;
+    margin-top: 6px;
+  }
+
+  th, td {
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  th {
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+  }
+
+  tr.highlight td {
+    background: rgba(212, 255, 0, 0.08);
+  }
+
+  .hint {
+    font-size: 0.76rem;
+    color: var(--muted);
+    margin: 0 0 8px 0;
+  }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.94);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+  }
+
+  .lightbox[hidden] {
+    display: none;
+  }
+
+  .lightbox-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    color: var(--text);
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+
+  .lightbox-img-wrap {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lightbox-img-wrap img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Results Board Checker</h1>
+    <span id="keyBadge" class="badge">NO KEY</span>
+  </header>
+
+  <div class="card">
+    <details id="settingsBox" open>
+      <summary>API Key &amp; Model Settings (Saved Locally)</summary>
+      <div class="settings-body">
+        <label for="apiKey">Gemini API Key (BYOK — Stored Only on This Device)</label>
+        <input type="password" id="apiKey" placeholder="Paste your AIza... key here" autocomplete="off">
+
+        <label for="modelSelect">Vision Model</label>
+        <select id="modelSelect">
+          <option value="gemini-4-hydrogen">gemini-4-hydrogen (Recommended — High Table Accuracy)</option>
+          <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (Fast / Low Cost)</option>
+          <option value="gemini-4-neon">gemini-4-neon (Complex/Dense Sheets — Paid Key)</option>
+        </select>
+
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-secondary btn-small" id="saveKeyBtn">Save Key</button>
+          <button type="button" class="btn btn-secondary btn-small" id="clearKeyBtn">Clear Key</button>
+        </div>
+        <p class="hint" style="margin-top:8px;">Your key stays in this browser's localStorage and is sent via request header directly to Google's API.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <div class="row-2">
+      <div>
+        <label for="carNums">Car Number(s)</label>
+        <input type="text" id="carNums" placeholder="e.g. 52 or 52, 53, 54">
+      </div>
+      <div>
+        <label for="sheetType">Sheet Type (Optional)</label>
+        <input type="text" id="sheetType" placeholder="e.g. Time Card 1 &amp; 2">
+      </div>
+    </div>
+
+    <label for="codeNotes">Event Code Notes (Optional)</label>
+    <input type="text" id="codeNotes" placeholder="e.g. F = fail, m = missed, a = ahead">
+
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none;">
+    <input type="file" id="galleryInput" accept="image/*" multiple style="display:none;">
+
+    <div class="row-2">
+      <button type="button" class="btn btn-secondary" id="snapBtn">Take Photo</button>
+      <button type="button" class="btn btn-secondary" id="pickBtn">Add Photo(s)</button>
+    </div>
+
+    <div id="previewWrap">
+      <div id="previewGrid" class="preview-grid"></div>
+      <div style="margin-top:8px; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        <span class="img-meta" id="imgMeta"></span>
+        <button type="button" class="btn btn-secondary btn-small" id="clearPhotosBtn">Clear Photos</button>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-primary" id="checkBtn" disabled>Check Results Sheet(s)</button>
+  </div>
+
+  <div id="statusBox" class="status" role="status" aria-live="polite">
+    <span id="statusText"></span>
+    <button type="button" class="btn btn-secondary btn-small" id="cancelBtn" style="display:none;">Cancel</button>
+  </div>
+
+  <div id="resultSection" class="result-section">
+    <div class="card">
+      <label>Sheet Legend / Reason Codes Found</label>
+      <div id="legendOut" class="legend-box"></div>
+
+      <label>Items to Check / Possible Errors</label>
+      <div id="flagsOut"></div>
+    </div>
+
+    <div class="card">
+      <label>Extracted Control Entries</label>
+      <div id="tablesOut"></div>
+    </div>
+  </div>
+</div>
+
+<div id="lightbox" class="lightbox" hidden>
+  <div class="lightbox-bar">
+    <span id="lightboxTitle">Sheet Preview</span>
+    <button type="button" class="btn btn-secondary btn-small" id="closeLightboxBtn">Close</button>
+  </div>
+  <div class="lightbox-img-wrap">
+    <img id="lightboxImg" src="" alt="Full size sheet preview">
+  </div>
+</div>
+
+<script>
+  const LS_KEY = 'qrally_results_api_key';
+  const LS_MODEL = 'qrally_results_model';
+  const LS_NOTES = 'qrally_results_code_notes';
+  const LS_CARS = 'qrally_results_car_nums';
+  const LS_SHEET = 'qrally_results_sheet_type';
+
+  const MAX_SHEETS = 8;
+  const MAX_TOTAL_KB = 15360; // ~15 MB safety ceiling for base64 payload
+  const REQUEST_TIMEOUT_MS = 60000;
+
+  const apiKeyEl = document.getElementById('apiKey');
+  const modelEl = document.getElementById('modelSelect');
+  const keyBadgeEl = document.getElementById('keyBadge');
+  const settingsBoxEl = document.getElementById('settingsBox');
+  const carNumsEl = document.getElementById('carNums');
+  const sheetTypeEl = document.getElementById('sheetType');
+  const codeNotesEl = document.getElementById('codeNotes');
+  const cameraInputEl = document.getElementById('cameraInput');
+  const galleryInputEl = document.getElementById('galleryInput');
+  const previewWrapEl = document.getElementById('previewWrap');
+  const previewGridEl = document.getElementById('previewGrid');
+  const imgMetaEl = document.getElementById('imgMeta');
+  const checkBtnEl = document.getElementById('checkBtn');
+  const statusBoxEl = document.getElementById('statusBox');
+  const statusTextEl = document.getElementById('statusText');
+  const cancelBtnEl = document.getElementById('cancelBtn');
+  const resultSectionEl = document.getElementById('resultSection');
+  const legendOutEl = document.getElementById('legendOut');
+  const flagsOutEl = document.getElementById('flagsOut');
+  const tablesOutEl = document.getElementById('tablesOut');
+  const lightboxEl = document.getElementById('lightbox');
+  const lightboxImgEl = document.getElementById('lightboxImg');
+  const lightboxTitleEl = document.getElementById('lightboxTitle');
+
+  let preparedImages = [];
+  let isProcessingImages = false;
+  let activeAbortController = null;
+
+  function isValidKeyFormat(key) {
+    return key.trim().length > 10;
+  }
+
+  function refreshState() {
+    const savedKey = localStorage.getItem(LS_KEY) || '';
+    apiKeyEl.value = savedKey;
+
+    const savedModel = localStorage.getItem(LS_MODEL);
+    const validModels = Array.from(modelEl.options).map(o => o.value);
+    if (savedModel && validModels.includes(savedModel)) {
+      modelEl.value = savedModel;
+    } else {
+      modelEl.value = validModels[0];
+      localStorage.setItem(LS_MODEL, modelEl.value);
+    }
+
+    const savedCars = localStorage.getItem(LS_CARS);
+    if (savedCars !== null) carNumsEl.value = savedCars;
+
+    const savedSheet = localStorage.getItem(LS_SHEET);
+    if (savedSheet !== null) sheetTypeEl.value = savedSheet;
+
+    const savedNotes = localStorage.getItem(LS_NOTES);
+    if (savedNotes !== null) codeNotesEl.value = savedNotes;
+
+    if (isValidKeyFormat(savedKey)) {
+      keyBadgeEl.textContent = 'KEY READY';
+      keyBadgeEl.classList.add('ready');
+      settingsBoxEl.open = false;
+    } else {
+      keyBadgeEl.textContent = 'NO KEY';
+      keyBadgeEl.classList.remove('ready');
+      settingsBoxEl.open = true;
+    }
+    updateCheckBtn();
+  }
+
+  function updateCheckBtn() {
+    const hasKey = isValidKeyFormat(apiKeyEl.value || '');
+    const busy = isProcessingImages || activeAbortController !== null;
+    checkBtnEl.disabled = !(hasKey && preparedImages.length > 0 && !busy);
+  }
+
+  document.getElementById('saveKeyBtn').addEventListener('click', () => {
+    const k = apiKeyEl.value.trim();
+    if (!isValidKeyFormat(k)) {
+      showStatus('Please paste a valid Gemini API key before saving.', 'error');
+      return;
+    }
+    hideStatus();
+    localStorage.setItem(LS_KEY, k);
+    localStorage.setItem(LS_MODEL, modelEl.value);
+    refreshState();
+  });
+
+  document.getElementById('clearKeyBtn').addEventListener('click', () => {
+    localStorage.removeItem(LS_KEY);
+    apiKeyEl.value = '';
+    refreshState();
+  });
+
+  apiKeyEl.addEventListener('input', updateCheckBtn);
+  modelEl.addEventListener('change', () => localStorage.setItem(LS_MODEL, modelEl.value));
+  carNumsEl.addEventListener('change', () => localStorage.setItem(LS_CARS, carNumsEl.value));
+  sheetTypeEl.addEventListener('change', () => localStorage.setItem(LS_SHEET, sheetTypeEl.value));
+  codeNotesEl.addEventListener('change', () => localStorage.setItem(LS_NOTES, codeNotesEl.value));
+
+  document.getElementById('snapBtn').addEventListener('click', () => cameraInputEl.click());
+  document.getElementById('pickBtn').addEventListener('click', () => galleryInputEl.click());
+  document.getElementById('clearPhotosBtn').addEventListener('click', () => {
+    preparedImages = [];
+    cameraInputEl.value = '';
+    galleryInputEl.value = '';
+    resultSectionEl.style.display = 'none';
+    hideStatus();
+    renderPreviews();
+    updateCheckBtn();
+  });
+
+  cancelBtnEl.addEventListener('click', () => {
+    if (activeAbortController) {
+      activeAbortController.abort('user_cancelled');
+    }
+  });
+
+  document.getElementById('closeLightboxBtn').addEventListener('click', closeLightbox);
+  lightboxEl.addEventListener('click', (e) => {
+    if (e.target === lightboxEl) closeLightbox();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !lightboxEl.hidden) closeLightbox();
+  });
+
+  function openLightbox(item, idx) {
+    lightboxTitleEl.textContent = `Sheet ${idx + 1} (${item.w}x${item.h}px)`;
+    lightboxImgEl.src = item.dataUrl;
+    lightboxEl.hidden = false;
+  }
+
+  function closeLightbox() {
+    lightboxEl.hidden = true;
+    lightboxImgEl.src = '';
+  }
+
+  function removeImage(idx) {
+    preparedImages.splice(idx, 1);
+    if (preparedImages.length === 0) {
+      resultSectionEl.style.display = 'none';
+      hideStatus();
+    }
+    renderPreviews();
+    updateCheckBtn();
+  }
+
+  function renderPreviews() {
+    previewGridEl.innerHTML = '';
+    if (preparedImages.length === 0) {
+      previewWrapEl.style.display = 'none';
+      imgMetaEl.textContent = '';
+      return;
+    }
+    previewWrapEl.style.display = 'block';
+    let totalKb = 0;
+
+    preparedImages.forEach((item, idx) => {
+      totalKb += item.kb;
+
+      const tile = document.createElement('div');
+      tile.className = 'preview-tile';
+
+      const img = document.createElement('img');
+      img.src = item.dataUrl;
+      img.alt = `Sheet ${idx + 1}`;
+      img.title = 'Tap to zoom';
+      img.addEventListener('click', () => openLightbox(item, idx));
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'remove-tile-btn';
+      removeBtn.textContent = '×';
+      removeBtn.title = `Remove Sheet ${idx + 1}`;
+      removeBtn.addEventListener('click', () => removeImage(idx));
+
+      const meta = document.createElement('div');
+      meta.className = 'img-meta';
+      meta.textContent = `Sheet ${idx + 1}: ${item.w}×${item.h} (~${item.kb} KB) — tap to zoom`;
+
+      tile.appendChild(img);
+      tile.appendChild(removeBtn);
+      tile.appendChild(meta);
+      previewGridEl.appendChild(tile);
+    });
+
+    imgMetaEl.textContent = `${preparedImages.length} sheet(s) ready (~${totalKb} KB total)`;
+  }
+
+  function compressSingleFile(file) {
+    return new Promise((resolve, reject) => {
+      const objectUrl = URL.createObjectURL(file);
+      const img = new Image();
+
+      img.onload = () => {
+        try {
+          const maxDim = 2400;
+          let w = img.naturalWidth || img.width;
+          let h = img.naturalHeight || img.height;
+          if (!w || !h) {
+            throw new Error(`Image "${file.name}" has zero dimensions.`);
+          }
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            throw new Error('Canvas 2D context unavailable.');
+          }
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, w, h);
+
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
+          const base64 = dataUrl.split(',')[1];
+          const kb = Math.round((base64.length * 3) / 4 / 1024);
+          resolve({ base64, mimeType: 'image/jpeg', dataUrl, w, h, kb });
+        } catch (err) {
+          reject(err);
+        } finally {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error(`Could not decode "${file.name}". If this is a HEIC photo, convert to JPEG or take a screenshot.`));
+      };
+
+      img.src = objectUrl;
+    });
+  }
+
+  async function handleFiles(fileList) {
+    const files = Array.from(fileList || []).filter(f => f && f.type.startsWith('image/'));
+    if (files.length === 0) return;
+
+    const remainingSlots = MAX_SHEETS - preparedImages.length;
+    if (remainingSlots <= 0) {
+      showStatus(`Maximum of ${MAX_SHEETS} sheets reached. Clear or remove a photo first.`, 'error');
+      return;
+    }
+
+    const filesToProcess = files.slice(0, remainingSlots);
+    if (files.length > remainingSlots) {
+      showStatus(`Only added first ${remainingSlots} photo(s) (limit ${MAX_SHEETS} sheets per check).`, 'info');
+    } else {
+      hideStatus();
+    }
+
+    isProcessingImages = true;
+    updateCheckBtn();
+
+    try {
+      const processed = await Promise.all(filesToProcess.map(compressSingleFile));
+      const nextImages = preparedImages.concat(processed);
+      const nextTotalKb = nextImages.reduce((sum, item) => sum + item.kb, 0);
+
+      if (nextTotalKb > MAX_TOTAL_KB) {
+        showStatus(`Combined images exceed ~${Math.round(MAX_TOTAL_KB / 1024)} MB. Remove a photo or upload fewer sheets at once.`, 'error');
+        return;
+      }
+
+      preparedImages = nextImages;
+      renderPreviews();
+    } catch (err) {
+      showStatus('Photo error: ' + err.message, 'error');
+    } finally {
+      isProcessingImages = false;
+      cameraInputEl.value = '';
+      galleryInputEl.value = '';
+      updateCheckBtn();
+    }
+  }
+
+  cameraInputEl.addEventListener('change', (e) => handleFiles(e.target.files));
+  galleryInputEl.addEventListener('change', (e) => handleFiles(e.target.files));
+
+  function showStatus(msg, type, allowCancel = false) {
+    statusTextEl.textContent = msg;
+    statusBoxEl.className = 'status ' + type;
+    cancelBtnEl.style.display = allowCancel ? 'inline-flex' : 'none';
+  }
+
+  function hideStatus() {
+    statusBoxEl.className = 'status';
+    statusTextEl.textContent = '';
+    cancelBtnEl.style.display = 'none';
+  }
+
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function stripCodeFences(raw) {
+    return raw
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+  }
+
+  checkBtnEl.addEventListener('click', async () => {
+    const key = apiKeyEl.value.trim();
+    if (!isValidKeyFormat(key) || preparedImages.length === 0) return;
+
+    localStorage.setItem(LS_KEY, key);
+    localStorage.setItem(LS_CARS, carNumsEl.value);
+    localStorage.setItem(LS_SHEET, sheetTypeEl.value);
+    localStorage.setItem(LS_NOTES, codeNotesEl.value);
+
+    const model = modelEl.value;
+    const cars = carNumsEl.value.trim();
+    const sheetHint = sheetTypeEl.value.trim();
+    const notes = codeNotesEl.value.trim();
+
+    const controller = new AbortController();
+    activeAbortController = controller;
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort('timeout');
+    }, REQUEST_TIMEOUT_MS);
+
+    showStatus(`Reading ${preparedImages.length} results sheet(s) with ${model}...`, 'loading', true);
+    resultSectionEl.style.display = 'none';
+    updateCheckBtn();
+
+    const systemInstruction = `You are a UK motorsport rally results checker inspecting photographs of rally results boards and time cards.
+Rules:
+1. Examine EVERY attached image in order (Sheet 1, Sheet 2, etc.) and extract any Reason Codes / Legend printed on each sheet verbatim. Do NOT assume letter codes mean the same thing across different rallies; rely on each sheet's own legend and the user's code notes first.
+2. Match exact car numbers only (e.g., if asked for Car 5, do NOT return Car 15 or Car 52). Check whether car numbers are printed on the far left, far right, or both, and carefully follow the row horizontally across columns.
+3. Preserve exact raw cell text (e.g. "1a", "1m", "Rtrd", "0:48", "10", "00", "0", "-"). Distinguish printed "0" or "00" or "-" from genuinely empty/blank cells ("BLANK").
+4. Include the sheet number (e.g., "Sheet 1", "Sheet 2") and label controls clearly (e.g., "TC1 [Time Card 1]" or "TC7 [Leg 2]").
+5. Flag anything unusual or worth querying before results go provisional/final:
+   - Non-standard or ambiguous letter codes ("1a", "1m", "o", "w", "c", "F", "Rtrd", "OTL", "DNF")
+   - Retirements ("Rtrd") appearing AFTER later controls already have recorded times, or recorded times appearing after an earlier retirement
+   - Sudden large penalties or max/fail codes compared to surrounding controls
+   - Truly blank cells where neighbouring cars on the same control have recorded times
+   - Low-confidence / blurry / glare-obscured digits that the competitor should verify visually.`;
+
+    const userPrompt = `Inspect the ${preparedImages.length} attached results sheet photograph(s).
+Target car number(s): ${cars || 'Not specified — check any cars with unusual entries or anomalies'}
+Sheet hint: ${sheetHint || 'Not specified'}
+Event-specific code notes from user: ${notes || 'None'}`;
+
+    const parts = [{ text: userPrompt }];
+    preparedImages.forEach((img, i) => {
+      parts.push({ text: `--- Sheet ${i + 1} ---` });
+      parts.push({
+        inline_data: {
+          mime_type: img.mimeType,
+          data: img.base64
+        }
+      });
+    });
+
+    const responseSchema = {
+      type: 'OBJECT',
+      required: ['sheetTitle', 'legendFound', 'flags', 'cars'],
+      properties: {
+        sheetTitle: { type: 'STRING' },
+        legendFound: { type: 'STRING' },
+        flags: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            required: ['car', 'sheet', 'control', 'rawValue', 'severity', 'reason'],
+            properties: {
+              car: { type: 'STRING' },
+              sheet: { type: 'STRING' },
+              control: { type: 'STRING' },
+              rawValue: { type: 'STRING' },
+              severity: { type: 'STRING', enum: ['high', 'check'] },
+              reason: { type: 'STRING' }
+            }
+          }
+        },
+        cars: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            required: ['car', 'class', 'entries'],
+            properties: {
+              car: { type: 'STRING' },
+              class: { type: 'STRING' },
+              entries: {
+                type: 'ARRAY',
+                items: {
+                  type: 'OBJECT',
+                  required: ['sheet', 'control', 'rawValue', 'unusual', 'confidence'],
+                  properties: {
+                    sheet: { type: 'STRING' },
+                    control: { type: 'STRING' },
+                    rawValue: { type: 'STRING' },
+                    unusual: { type: 'BOOLEAN' },
+                    confidence: { type: 'STRING', enum: ['high', 'medium', 'low'] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    };
+
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+      const res = await fetch(url, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': key
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: systemInstruction }]
+          },
+          contents: [{ role: 'user', parts }],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            responseSchema
+          }
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        const errMsg = data?.error?.message || `HTTP ${res.status}`;
+        throw new Error(errMsg);
+      }
+
+      const candidate = data?.candidates?.[0];
+      const partsOut = candidate?.content?.parts || [];
+      if (partsOut.length === 0) {
+        const reason = data?.promptFeedback?.blockReason || candidate?.finishReason || 'Empty response';
+        throw new Error(`No model output returned (${reason}).`);
+      }
+
+      const rawText = partsOut
+        .filter(p => !p.thought && typeof p.text === 'string')
+        .map(p => p.text)
+        .join('')
+        .trim();
+
+      if (!rawText) {
+        throw new Error(`Model returned no JSON text (finishReason: ${candidate?.finishReason || 'unknown'}).`);
+      }
+
+      const parsed = JSON.parse(stripCodeFences(rawText));
+      renderResults(parsed);
+      hideStatus();
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        showStatus(
+          timedOut
+            ? 'Request timed out (weak signal or very large sheets). Try again or use fewer sheets.'
+            : 'Check cancelled.',
+          timedOut ? 'error' : 'info'
+        );
+      } else {
+        showStatus('Error: ' + err.message, 'error');
+      }
+    } finally {
+      clearTimeout(timeoutId);
+      activeAbortController = null;
+      updateCheckBtn();
+    }
+  });
+
+  function renderResults(data) {
+    legendOutEl.innerHTML = `<strong>${escapeHtml(data.sheetTitle || 'Results Sheet(s)')}</strong>\n${escapeHtml(data.legendFound || 'No legend visible in photo(s)')}`;
+
+    flagsOutEl.innerHTML = '';
+    const flags = Array.isArray(data.flags) ? data.flags : [];
+    if (flags.length === 0) {
+      flagsOutEl.innerHTML = '<p class="hint" style="color:var(--green);">No obvious coding anomalies flagged for the selected car(s). Still verify key times visually.</p>';
+    } else {
+      flags.forEach(f => {
+        const div = document.createElement('div');
+        div.className = 'flag-item' + (f.severity === 'high' ? ' high' : '');
+        const sheetTag = f.sheet ? `${escapeHtml(f.sheet)} · ` : '';
+        div.innerHTML = `
+          <div class="flag-title">Car ${escapeHtml(f.car)} — ${escapeHtml(f.control)}: <span class="raw-code">${escapeHtml(f.rawValue || 'BLANK')}</span></div>
+          <div class="flag-meta">${sheetTag}Severity: ${escapeHtml((f.severity || 'check').toUpperCase())}</div>
+          <div style="font-size:0.86rem;">${escapeHtml(f.reason)}</div>
+        `;
+        flagsOutEl.appendChild(div);
+      });
+    }
+
+    tablesOutEl.innerHTML = '';
+    const cars = Array.isArray(data.cars) ? data.cars : [];
+    if (cars.length === 0) {
+      tablesOutEl.innerHTML = '<p class="hint">No car rows extracted. Try closer photos or enter specific car numbers.</p>';
+    } else {
+      cars.forEach(c => {
+        const header = document.createElement('div');
+        header.style.margin = '12px 0 4px 0';
+        header.style.fontWeight = '800';
+        header.style.color = 'var(--accent)';
+        header.textContent = `Car ${c.car}${c.class ? ' (Class ' + c.class + ')' : ''}`;
+        tablesOutEl.appendChild(header);
+
+        const wrap = document.createElement('div');
+        wrap.className = 'table-wrap';
+
+        const tbl = document.createElement('table');
+        tbl.innerHTML = '<thead><tr><th>Sheet</th><th>Control</th><th>Raw Value</th><th>Status</th></tr></thead><tbody></tbody>';
+        const tbody = tbl.querySelector('tbody');
+
+        (c.entries || []).forEach(ent => {
+          const tr = document.createElement('tr');
+          const lowConf = ent.confidence === 'low';
+          if (ent.unusual || lowConf) tr.className = 'highlight';
+
+          let statusHtml = 'OK';
+          if (ent.unusual && lowConf) {
+            statusHtml = '<span style="color:var(--danger);font-weight:700;">CHECK (BLURRY)</span>';
+          } else if (ent.unusual) {
+            statusHtml = '<span style="color:var(--warn);font-weight:700;">CHECK</span>';
+          } else if (lowConf) {
+            statusHtml = '<span style="color:var(--warn);font-weight:700;">VERIFY (LOW CONF)</span>';
+          }
+
+          tr.innerHTML = `
+            <td>${escapeHtml(ent.sheet || '—')}</td>
+            <td>${escapeHtml(ent.control)}</td>
+            <td><span class="raw-code">${escapeHtml(ent.rawValue || 'BLANK')}</span></td>
+            <td>${statusHtml}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        wrap.appendChild(tbl);
+        tablesOutEl.appendChild(wrap);
+      });
+    }
+
+    resultSectionEl.style.display = 'block';
+  }
+
+  refreshState();
+</script>
+</body>
+</html>
